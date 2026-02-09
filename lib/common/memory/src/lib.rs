@@ -1,3 +1,5 @@
+#[cfg(unix)]
+pub mod cache;
 pub mod checkfs;
 pub mod chunked_utils;
 pub mod fadvise;
