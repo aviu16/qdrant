@@ -6,6 +6,7 @@ use common::types::PointOffsetType;
 use fs_err as fs;
 use fs_err::OpenOptions;
 use memmap2::{Mmap, MmapMut};
+use memory::chunked_utils::MmapChunkView;
 use memory::madvise;
 use memory::madvise::Madviseable;
 use memory::mmap_type::MmapFlusher;
@@ -64,10 +65,10 @@ impl QuantizedMmapStorage {
 }
 
 impl quantization::EncodedStorage for QuantizedMmapStorage {
-    fn get_vector_data(&self, index: PointOffsetType) -> &[u8] {
+    fn get_vector_data(&self, index: PointOffsetType) -> MmapChunkView<'_, u8> {
         let start = self.quantized_vector_size.get() * index as usize;
         let end = self.quantized_vector_size.get() * (index + 1) as usize;
-        self.mmap.get(start..end).unwrap_or(&[])
+        MmapChunkView::Slice(self.mmap.get(start..end).unwrap_or(&[]))
     }
 
     fn upsert_vector(

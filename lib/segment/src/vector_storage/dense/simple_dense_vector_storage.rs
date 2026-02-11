@@ -9,6 +9,7 @@ use common::counter::hardware_counter::HardwareCounterCell;
 use common::ext::BitSliceExt as _;
 use common::types::PointOffsetType;
 use log::debug;
+use memory::chunked_utils::MmapChunkView;
 use parking_lot::RwLock;
 use rocksdb::DB;
 
@@ -234,8 +235,8 @@ impl<T: PrimitiveVectorElement> DenseVectorStorage<T> for SimpleDenseVectorStora
         self.dim
     }
 
-    fn get_dense<P: AccessPattern>(&self, key: PointOffsetType) -> &[T] {
-        self.vectors.get(key as VectorOffsetType)
+    fn get_dense<P: AccessPattern>(&self, key: PointOffsetType) -> MmapChunkView<'_, T> {
+        MmapChunkView::Slice(self.vectors.get(key as VectorOffsetType))
     }
 }
 

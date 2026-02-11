@@ -7,6 +7,7 @@ use bitvec::prelude::BitSlice;
 use common::counter::hardware_counter::HardwareCounterCell;
 use common::types::PointOffsetType;
 use fs_err as fs;
+use memory::chunked_utils::MmapChunkView;
 use memory::madvise::AdviceSetting;
 
 use crate::common::Flusher;
@@ -80,7 +81,7 @@ impl<T: PrimitiveVectorElement> DenseVectorStorage<T> for AppendableMmapDenseVec
         self.vectors.dim()
     }
 
-    fn get_dense<P: AccessPattern>(&self, key: PointOffsetType) -> &[T] {
+    fn get_dense<P: AccessPattern>(&self, key: PointOffsetType) -> MmapChunkView<'_, T> {
         self.vectors
             .get::<P>(key as VectorOffsetType)
             .expect("mmap vector not found")
@@ -111,14 +112,24 @@ impl<T: PrimitiveVectorElement> VectorStorage for AppendableMmapDenseVectorStora
     fn get_vector<P: AccessPattern>(&self, key: PointOffsetType) -> CowVector<'_> {
         self.vectors
             .get::<P>(key as VectorOffsetType)
-            .map(|slice| CowVector::from(T::slice_to_float_cow(slice.into())))
+            .map(|view| match view {
+                MmapChunkView::Slice(slice) => CowVector::from(T::slice_to_float_cow(slice.into())),
+                MmapChunkView::Box(boxed) => {
+                    CowVector::from(T::slice_to_float_cow(Cow::Owned(boxed.into_vec())))
+                }
+            })
             .expect("Vector not found")
     }
 
     fn get_vector_opt<P: AccessPattern>(&self, key: PointOffsetType) -> Option<CowVector<'_>> {
         self.vectors
             .get::<P>(key as VectorOffsetType)
-            .map(|slice| CowVector::from(T::slice_to_float_cow(slice.into())))
+            .map(|view| match view {
+                MmapChunkView::Slice(slice) => CowVector::from(T::slice_to_float_cow(slice.into())),
+                MmapChunkView::Box(boxed) => {
+                    CowVector::from(T::slice_to_float_cow(Cow::Owned(boxed.into_vec())))
+                }
+            })
     }
 
     fn insert_vector(

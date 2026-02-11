@@ -5,6 +5,7 @@ use common::counter::hardware_counter::HardwareCounterCell;
 use common::types::PointOffsetType;
 use fs_err as fs;
 use fs_err::File;
+use memory::chunked_utils::MmapChunkView;
 use memory::fadvise::OneshotFile;
 use memory::mmap_type::MmapFlusher;
 
@@ -42,8 +43,8 @@ impl QuantizedRamStorage {
 }
 
 impl quantization::EncodedStorage for QuantizedRamStorage {
-    fn get_vector_data(&self, index: PointOffsetType) -> &[u8] {
-        self.vectors.get(index as VectorOffsetType)
+    fn get_vector_data(&self, index: PointOffsetType) -> MmapChunkView<'_, u8> {
+        MmapChunkView::Slice(self.vectors.get(index as VectorOffsetType))
     }
 
     fn upsert_vector(

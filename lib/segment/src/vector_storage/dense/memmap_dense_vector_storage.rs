@@ -9,6 +9,7 @@ use common::counter::hardware_counter::HardwareCounterCell;
 use common::types::PointOffsetType;
 use fs_err as fs;
 use fs_err::{File, OpenOptions};
+use memory::chunked_utils::MmapChunkView;
 use memory::fadvise::clear_disk_cache;
 use memory::madvise::AdviceSetting;
 use memory::mmap_ops;
@@ -177,12 +178,14 @@ impl<T: PrimitiveVectorElement> DenseVectorStorage<T> for MemmapDenseVectorStora
         self.mmap_store.as_ref().unwrap().dim
     }
 
-    fn get_dense<P: AccessPattern>(&self, key: PointOffsetType) -> &[T] {
-        self.mmap_store
-            .as_ref()
-            .unwrap()
-            .get_vector_opt::<P>(key)
-            .unwrap_or_else(|| panic!("vector not found: {key}"))
+    fn get_dense<P: AccessPattern>(&self, key: PointOffsetType) -> MmapChunkView<'_, T> {
+        MmapChunkView::Slice(
+            self.mmap_store
+                .as_ref()
+                .unwrap()
+                .get_vector_opt::<P>(key)
+                .unwrap_or_else(|| panic!("vector not found: {key}")),
+        )
     }
 
     fn for_each_in_dense_batch<F: FnMut(usize, &[T])>(&self, keys: &[PointOffsetType], f: F) {

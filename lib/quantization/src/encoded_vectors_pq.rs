@@ -14,6 +14,7 @@ use common::typelevel::True;
 use common::types::PointOffsetType;
 use fs_err as fs;
 use io::file_operations::atomic_save_json;
+use memory::chunked_utils::MmapChunkView;
 use memory::mmap_type::MmapFlusher;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
@@ -488,7 +489,7 @@ impl<TStorage: EncodedStorage> EncodedVectorsPQ<TStorage> {
             .sum()
     }
 
-    pub fn get_quantized_vector(&self, i: PointOffsetType) -> &[u8] {
+    pub fn get_quantized_vector(&self, i: PointOffsetType) -> MmapChunkView<'_, u8> {
         self.encoded_vectors.get_vector_data(i)
     }
 
@@ -540,7 +541,7 @@ impl<TStorage: EncodedStorage> EncodedVectors for EncodedVectorsPQ<TStorage> {
     ) -> f32 {
         let centroids = self.encoded_vectors.get_vector_data(i);
 
-        self.score_bytes(True, query, centroids, hw_counter)
+        self.score_bytes(True, query, &centroids, hw_counter)
     }
 
     /// Score two points inside endoded data by their indexes
@@ -572,7 +573,7 @@ impl<TStorage: EncodedStorage> EncodedVectors for EncodedVectorsPQ<TStorage> {
 
         let distance: f32 = centroids_i
             .iter()
-            .zip(centroids_j)
+            .zip(centroids_j.iter())
             .enumerate()
             .map(|(range_index, (&c_i, &c_j))| {
                 let range = &self.metadata.vector_division[range_index];
