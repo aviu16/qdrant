@@ -4,7 +4,7 @@ use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
 
 use common::counter::hardware_counter::HardwareCounterCell;
-use common::maybe_uninit::maybe_uninit_fill_from;
+use common::maybe_uninit::maybe_uninit_fill_from_with_drop;
 use fs_err as fs;
 use fs_err::File;
 use io::file_operations::atomic_save_json;
@@ -296,7 +296,7 @@ impl<T: Sized + Copy + 'static> ChunkedMmapVectors<T> {
         // Fetching all vectors first then scoring them is more cache friendly
         // then fetching and scoring in a single loop.
         let mut vectors_buffer = [const { MaybeUninit::uninit() }; VECTOR_READ_BATCH_SIZE];
-        let vectors = maybe_uninit_fill_from(
+        let vectors = maybe_uninit_fill_from_with_drop(
             &mut vectors_buffer,
             keys.iter().map(|&key| {
                 self.get_many_impl(key.offset(), 1, do_sequential_read)
@@ -308,6 +308,8 @@ impl<T: Sized + Copy + 'static> ChunkedMmapVectors<T> {
         for (i, vec) in vectors.iter().enumerate() {
             f(i, vec.as_slice());
         }
+
+        drop(vectors);
     }
 
     pub fn flusher(&self) -> Flusher {
