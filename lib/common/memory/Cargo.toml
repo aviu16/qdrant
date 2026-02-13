@@ -26,6 +26,7 @@ quick_cache = "0.6.18"
 serde = { workspace = true }
 thiserror = { workspace = true }
 zerocopy = { workspace = true }
+trififo = { path= "../../trififo" }
 
 [dev-dependencies]
 fs-err = { workspace = true, features = ["debug", "debug_tokio"] }
